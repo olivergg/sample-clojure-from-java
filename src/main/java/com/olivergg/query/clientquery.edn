@@ -1,0 +1,12 @@
+(ns com.olivergg.query.client
+  (:require [com.olivergg.query.common :refer :all]))
+
+
+(prn "loading clientquery ns")
+
+
+(defn myclientquery []
+  (sql " select c.* from client c
+	       where c.name = :namedParameter1 
+         order by c.description "))
+

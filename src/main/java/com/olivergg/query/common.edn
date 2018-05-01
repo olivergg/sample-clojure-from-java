@@ -1,0 +1,61 @@
+(ns com.olivergg.query.common)
+
+(prn "loading common namespace")
+
+
+(defmacro fmt 
+  "String interpolation macro (using `#{}` as a place holder)"
+  [^String string]
+  (let [-re #"#\{(.*?)\}"
+        fstr (clojure.string/replace string -re "%s")
+        fargs (map #(read-string (second %)) (re-seq -re string))]
+    `(format ~fstr ~@fargs)))
+
+
+;; not used
+(defn transform
+   "Transform the given input string into a valid SQL query by removing IFF ENDIFF clauses"
+   [input]
+   (loop [[head & remain] (clojure.string/split input #"[ \n\t]")
+          stack (list)
+          output (transient [])]
+       (cond
+         (nil? head)  (as-> output _
+                        (persistent! _)
+                        (interpose  " " _)
+                        (reduce str _)
+                        (clojure.string/replace _ #"(?s)\/\*([^\*]+)\*\/" "")
+                        (clojure.string/replace _ #"\n" " "))
+         :else (let [[_ iffcondition] (re-matches #"IFF\((.*)\)" head)
+                     [_ endiff] (re-matches #"(ENDIFF)" head)
+                     evalcondition (when iffcondition (eval (read-string iffcondition)))]
+                 (cond
+                   iffcondition (recur remain (conj stack (or evalcondition false) ) output)
+
+                   endiff (recur remain (rest stack) output)
+
+                   (or (empty? stack)
+                       (reduce #(and %1 %2) stack))
+                   (recur remain stack (conj! output head))
+
+                   :else (recur remain stack output))))))
+
+
+;; not used, this was an attempt to use interpolated string macros to parse custom conditional DSL built in the SQL string.
+(defmacro defquery [queryname [& args] ^String string]
+  (let [-re #"\$\b(\w+\b)"
+        fstr (clojure.string/replace string -re "~a")
+        fargs (map #(read-string (second %)) (re-seq -re string))]
+    `(defn ~queryname [~@args]
+       (transform (clojure.pprint/cl-format nil ~fstr ~@fargs)))))
+
+
+
+;; compose several functions together : str to format, replace \n, \t with empty space, remove sql comment
+;; (comp f g) is equivalent to (fn[x] (f (g x)))
+(def sql (comp #(clojure.string/replace % #"(?s)\/\*([^\*]+)\*\/" "") 
+               #(clojure.string/replace % #"\s" " ")
+               str)) 
+
+
+
