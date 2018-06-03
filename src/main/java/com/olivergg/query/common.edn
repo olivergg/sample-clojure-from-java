@@ -2,8 +2,8 @@
 
 (prn "loading common namespace")
 
-
-(defmacro fmt 
+;; not used yet
+(defmacro fmt
   "String interpolation macro (using `#{}` as a place holder)"
   [^String string]
   (let [-re #"#\{(.*?)\}"
@@ -12,7 +12,8 @@
     `(format ~fstr ~@fargs)))
 
 
-;; not used
+;; not used yet, this was an atempt to parse IFF ENDIFF condition embedded inside string.
+;; for example (transform "begin IFF(true) insideiff ENDIFF end") => "begin insideiff end"
 (defn transform
    "Transform the given input string into a valid SQL query by removing IFF ENDIFF clauses"
    [input]
@@ -41,21 +42,15 @@
                    :else (recur remain stack output))))))
 
 
-;; not used, this was an attempt to use interpolated string macros to parse custom conditional DSL built in the SQL string.
-(defmacro defquery [queryname [& args] ^String string]
-  (let [-re #"\$\b(\w+\b)"
-        fstr (clojure.string/replace string -re "~a")
-        fargs (map #(read-string (second %)) (re-seq -re string))]
-    `(defn ~queryname [~@args]
-       (transform (clojure.pprint/cl-format nil ~fstr ~@fargs)))))
-
-
-
-;; compose several functions together : str to format, replace \n, \t with empty space, remove sql comment
-;; (comp f g) is equivalent to (fn[x] (f (g x)))
-(def sql (comp #(clojure.string/replace % #"(?s)\/\*([^\*]+)\*\/" "") 
+;; create a function that compose several transformations of an input collection of strings
+;; remove line break, SQL comments
+(def sql (comp #(clojure.string/replace % #"(?s)\/\*([^\*]+)\*\/" "")
                #(clojure.string/replace % #"\s" " ")
-               str)) 
+               str))
 
 
-
+(defmacro defquery 
+  "A simple macro to declare a String as a SQL query, hidding the call to the sql function"
+  [queryname [& args] & strings]
+  `(defn ~queryname [~@args] (sql ~@strings))
+  )

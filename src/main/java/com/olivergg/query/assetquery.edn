@@ -4,15 +4,16 @@
 (prn "loading assetquery ns")
 
 
-(defn myassetquery[param1 point]
+
+(defquery myassetquery[param1 point]
   ;; a complex multiline and conditional SQL query with the sql function (which is defined in the common.edn file). 
-  (sql " /* sql comment */
+        " /* sql comment */
         select {c.*} from asset a
 	       where a.name = :namedParameter1 "
-        (when param1 " and a.deleted is false ")
+        (when param1 " and a.deleted 
+                       is false ")
         (when (== (.getX point) 1.0 ) " and a.xpos = :xpoint")
-        " order by a.description "))
-
+        " order by a.description ")
 
 
 
