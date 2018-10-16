@@ -12,7 +12,7 @@
 	       where a.name = :namedParameter1 "
         (when param1 " and a.deleted 
                        is false ")
-        (when (== (.getX point) 1.0 ) " and a.xpos = :xpoint")
+        (when (== (some-> point .getX) 1.0 ) " and a.xpos = :xpoint")
         " order by a.description ")
 
 
